@@ -63,7 +63,6 @@ def calculateDepthRelationship(layer: Dict, url: str, api: Dict, callee: Dict, s
         entitySelector = "type(service),entityId({id})".format(id = id)
         if excludeTag:
             entitySelector = entitySelector+",not(tag("+excludeTag+"))"
-            logger.info("EntitySelector:"+entitySelector)
         if sre:
             httpResult = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":entitySelector,"from":"now-2h","fields":"fromRelationships.calls,properties.serviceType"}, logger)
         else:
