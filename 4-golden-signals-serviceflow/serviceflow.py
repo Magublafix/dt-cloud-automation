@@ -17,6 +17,8 @@ parser.add_argument("-am","--auto-monaco",dest="autoMonaco",help="Use this to au
 parser.add_argument("-sre","--sre-tag",dest="sre",help="Use this to only include services tagged with 'sre' as part of the serviceflow.", action="store_false")
 parser.add_argument("-reqLimit","--request-count-limit",dest="reqLimit",help="Use this to filter high throughput services. (missing = 0)", default=0)
 parser.add_argument("-l", "--logging", action="store", choices=["DEBUG","INFO","ERROR"],default="INFO", help="Optional logging levels, default is INFO if nothing is specified")
+parser.add_argument("-maxD", "--max-depth", dest="maxDepth", help="Maximal Calling-Hierarchy Depth to show. Can be used to reduce Dashboard size.", default=10)
+parser.add_argument("-excludeTag", "--exclude-tag", dest="excludeTag", help="Exclude Services with a specific tag.")
 
 args = parser.parse_args()
 
@@ -37,6 +39,8 @@ passP = int(args.passP)
 autoMonaco = args.autoMonaco
 sre = args.sre
 reqLimit = (int(args.reqLimit)/100)
+excludeTag = args.excludeTag
+maxDepth = int(args.maxDepth)
 
 SERVICER = {}
 LEVEL = {}
@@ -51,12 +55,15 @@ def calculateDepthRelationship(layer: Dict, url: str, api: Dict, callee: Dict, s
         return None
     else:
         logger.debug("Current Level - {initialLevel}".format(initialLevel=initialLevel))
-        if initialLevel > 5:
+        if initialLevel > maxDepth:
             return calculateDepthRelationship({"entities":[{"fromRelationships":{"calls":[]}}]}, url, api, callee, startId, 0, initialLevel)
         id = relationshipCalls[index]["id"]
         if id+str(initialLevel) in callee:
             return calculateDepthRelationship(layer, url, api, callee, startId, index + 1, initialLevel)
         entitySelector = "type(service),entityId({id})".format(id = id)
+        if excludeTag:
+            entitySelector = entitySelector+",not(tag("+excludeTag+"))"
+            logger.info("EntitySelector:"+entitySelector)
         if sre:
             httpResult = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":entitySelector,"from":"now-2h","fields":"fromRelationships.calls,properties.serviceType"}, logger)
         else:
