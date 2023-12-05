@@ -51,7 +51,6 @@ def calculateDepthRelationship(layer: Dict, url: str, api: Dict, callee: Dict, s
     if index > HEIGHT:
         HEIGHT = index
     if containsExcludedTag(layer["entities"][0]):
-        logger.info("TEST")
         return None
     relationshipCalls = layer["entities"][0]['fromRelationships'].get('calls')
     if relationshipCalls is None or index == len(relationshipCalls):
