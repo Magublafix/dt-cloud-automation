@@ -50,6 +50,9 @@ def calculateDepthRelationship(layer: Dict, url: str, api: Dict, callee: Dict, s
     global SERVICER, HEIGHT, WIDTH, LEVEL
     if index > HEIGHT:
         HEIGHT = index
+    if containsExcludedTag(layer["entities"][0]):
+        logger.info("TEST")
+        return None
     relationshipCalls = layer["entities"][0]['fromRelationships'].get('calls')
     if relationshipCalls is None or index == len(relationshipCalls):
         return None
@@ -61,12 +64,10 @@ def calculateDepthRelationship(layer: Dict, url: str, api: Dict, callee: Dict, s
         if id+str(initialLevel) in callee:
             return calculateDepthRelationship(layer, url, api, callee, startId, index + 1, initialLevel)
         entitySelector = "type(service),entityId({id})".format(id = id)
-        if excludeTag:
-            entitySelector = entitySelector+",not(tag("+excludeTag+"))"
         if sre:
-            httpResult = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":entitySelector,"from":"now-2h","fields":"fromRelationships.calls,properties.serviceType"}, logger)
+            httpResult = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":entitySelector,"from":"now-2h","fields":"tags,fromRelationships.calls,properties.serviceType"}, logger)
         else:
-            httpResult = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":entitySelector+",tag(sre)","from":"now-2h","fields":"fromRelationships.calls,properties.serviceType"}, logger)
+            httpResult = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":entitySelector+",tag(sre)","from":"now-2h","fields":"tags,fromRelationships.calls,properties.serviceType"}, logger)
         callee[id+str(initialLevel)] = "1"
         logger.debug("Current Index - {index}".format(index=index))
         if index > 20:
@@ -101,6 +102,14 @@ def addServiceInOrder(serviceRelation,id,service,requestCount):
             items.append((id,service))
     serviceRelation = dict(items)
     return serviceRelation
+
+def containsExcludedTag(entity):
+    for tag in entity.get("tags", []):
+        if excludeTag.lower() in tag["stringRepresentation"].lower():
+            logger.debug("Excluded entity ({name}) because of excluded Tag ({excludedTag})".format(name=entity.get("displayName"), excludedTag=excludeTag))
+            return True
+    return False
+
 
 def create_dashboard(serviceRelation,url, timeFrame, size):
     dashTemp = getFileJSON('etc/dashboard/template.json')
@@ -260,7 +269,7 @@ def serviceflow():
     global SERVICER,HEIGHT,WIDTH
     api = {'Content-Type': 'application/json', 'Authorization' : "Api-Token {token}".format(token=token)}
     logger.info("Reaching out to Dynatrace ({url})".format(url = url))
-    resultJ = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":"type(service),entityId({id})".format(id=id),"from":timeFrame,"fields":"fromRelationships.calls,properties.serviceType"}, logger)
+    resultJ = handleGet('{url}/api/v2/entities'.format(url = url), api, {"entitySelector":"type(service),entityId({id})".format(id=id),"from":timeFrame,"fields":"tags,fromRelationships.calls,properties.serviceType"}, logger)
     if resultJ["entities"]:
         displayName = resultJ["entities"][0]["displayName"]
         entityId = resultJ["entities"][0]["entityId"]
