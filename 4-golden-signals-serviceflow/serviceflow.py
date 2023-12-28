@@ -82,7 +82,7 @@ def calculateDepthRelationship(layer: Dict, url: str, api: Dict, callee: Dict, s
         callee[id + str(initialLevel)] = "1"
         logger.debug("Current Index - {index}".format(index=index))
         if containsExcludedTag(httpResult["entities"][0]):
-            return None
+            return calculateDepthRelationship(layer, url, api, callee, startId, index + 1, initialLevel)
         if index > 20:
             return calculateDepthRelationship(httpResult, url, api, callee, startId, 0, initialLevel)
         elif len(httpResult["entities"]) == 0:
